@@ -3,7 +3,7 @@
 // 기존 base.html + index.html 의 구조를 React 컴포넌트로 재현한다.
 // .ambient-layer > .app-shell > (sidebar + main-area)
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { DocumentInfo } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,6 +34,11 @@ export default function AppShell() {
   useEffect(() => {
     void loadDocuments();
   }, [loadDocuments, authenticated]);
+
+  // 기존 CSS 가 body.viewer-mode 를 사용하므로 body 에도 클래스를 동기화한다.
+  useLayoutEffect(() => {
+    document.body.classList.toggle("viewer-mode", !authenticated);
+  }, [authenticated]);
 
   const handleSelect = useCallback(
     (id: string) => {
