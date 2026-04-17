@@ -3,7 +3,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { AuthProvider } from "@/contexts/AuthContext";
-import type { Block, BlockType } from "@/types";
+import type { Block } from "@/types";
 import TextBlock from "@/components/blocks/TextBlock";
 import DividerBlock from "@/components/blocks/DividerBlock";
 import PageBlock from "@/components/blocks/PageBlock";
