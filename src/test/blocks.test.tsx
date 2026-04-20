@@ -74,7 +74,7 @@ describe("DividerBlock", () => {
     renderWithAuth(
       <DividerBlock block={makeBlock({ type: "divider" })} {...noopProps} />,
     );
-    expect(document.querySelector("hr.notion-divider")).toBeTruthy();
+    expect(document.querySelector("hr.notion-block.notion-divider")).toBeTruthy();
   });
 });
 

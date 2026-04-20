@@ -109,6 +109,7 @@ export default function BlockRenderer({
       block={block}
       parentBlockId={parentBlockId}
       onReload={onReload}
+      onReloadSidebar={onReloadSidebar}
       onAddBlockAfter={onAddBlockAfter}
       authenticated={authenticated}
     >

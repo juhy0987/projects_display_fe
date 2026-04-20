@@ -3,5 +3,5 @@
 import type { BlockComponentProps } from "@/components/editor/BlockRenderer";
 
 export default function DividerBlock(_props: BlockComponentProps) {
-  return <hr className="notion-divider" />;
+  return <hr className="notion-block notion-divider" />;
 }

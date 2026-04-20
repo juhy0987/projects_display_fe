@@ -43,7 +43,7 @@ export default function UrlEmbedBlock({ block, onReload }: BlockComponentProps) 
   const showInput = editing || !hasCard;
 
   return (
-    <div className="notion-url-embed">
+    <div className="notion-block notion-url-embed">
       {/* 입력 폼 */}
       <div className="url-embed-input-wrap" hidden={!showInput}>
         <span className="url-embed-input-icon">&#128279;</span>

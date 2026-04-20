@@ -79,7 +79,7 @@ export default function FileBlock({ block, onReload }: BlockComponentProps) {
   const showCard = hasFile;
 
   return (
-    <div className="notion-file">
+    <div className="notion-block notion-file">
       {/* 빈 상태(드롭존) */}
       <div
         className={`file-empty-state file-drop-zone${dragOver ? " is-drag-over" : ""}`}

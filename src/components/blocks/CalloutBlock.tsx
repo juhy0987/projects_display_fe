@@ -22,7 +22,7 @@ export default function CalloutBlock({
 
   return (
     <div
-      className="notion-callout"
+      className="notion-block notion-callout"
       data-color={block.color ?? undefined}
     >
       <span className="callout-emoji">{block.emoji ?? "💡"}</span>

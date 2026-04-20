@@ -93,7 +93,7 @@ export default function CodeBlock({ block, onReload }: BlockComponentProps) {
   const isMermaid = language === "mermaid";
 
   return (
-    <div className={`notion-code${isMermaid ? " is-mermaid" : ""}`}>
+    <div className={`notion-block notion-code${isMermaid ? " is-mermaid" : ""}`}>
       <div className="code-header">
         <select
           className="code-language-select"

@@ -72,7 +72,7 @@ export default function ImageBlock({ block, onReload }: BlockComponentProps) {
   // -- 빈 이미지 플레이스홀더 --
   if (!hasImage) {
     return (
-      <div className="notion-image-wrap">
+      <div className="notion-block notion-image-wrap">
         {uploading ? (
           <div className="image-placeholder">업로드 중...</div>
         ) : (
@@ -100,7 +100,7 @@ export default function ImageBlock({ block, onReload }: BlockComponentProps) {
   // -- 이미지 렌더 --
   return (
     <>
-      <div className="notion-image-wrap">
+      <div className="notion-block notion-image-wrap">
         <div className="image-media-wrap">
           <img
             className="notion-image"

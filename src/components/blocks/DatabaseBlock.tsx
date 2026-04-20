@@ -56,7 +56,7 @@ export default function DatabaseBlock({ block, onReload, onReloadSidebar }: Bloc
 
   return (
     <div
-      className="notion-database"
+      className="notion-block notion-database"
       style={block.color ? { borderColor: block.color } : undefined}
     >
       {/* 데이터베이스 제목 */}

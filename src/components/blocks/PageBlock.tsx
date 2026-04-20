@@ -16,7 +16,7 @@ export default function PageBlock({ block, onNavigate }: BlockComponentProps) {
   return (
     <button
       type="button"
-      className={`notion-page${isBroken ? " is-broken-ref" : ""}`}
+      className={`notion-block notion-page${isBroken ? " is-broken-ref" : ""}`}
       onClick={handleClick}
       disabled={isBroken}
     >

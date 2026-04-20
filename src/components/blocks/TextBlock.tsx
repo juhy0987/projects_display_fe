@@ -50,7 +50,7 @@ export default function TextBlock({ block }: BlockComponentProps) {
   return (
     <p
       ref={elRef}
-      className="notion-text"
+      className="notion-block notion-text"
       data-level={block.level ?? undefined}
       contentEditable={authenticated}
       suppressContentEditableWarning
