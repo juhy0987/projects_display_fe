@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import type { BlockComponentProps } from "@/components/editor/BlockRenderer";
 import { useAuth } from "@/contexts/AuthContext";
 import * as blocksApi from "@/api/blocks";
+import { sanitizeHtml } from "@/utils/sanitize";
 
 export default function ToggleBlock({
   block,
@@ -47,7 +48,7 @@ export default function ToggleBlock({
           contentEditable={authenticated}
           suppressContentEditableWarning
           dangerouslySetInnerHTML={{
-            __html: block.formatted_text ?? block.text ?? "",
+            __html: sanitizeHtml(block.formatted_text ?? block.text ?? ""),
           }}
           onBlur={handleTitleBlur}
         />

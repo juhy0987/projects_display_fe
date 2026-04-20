@@ -4,6 +4,7 @@ import { useCallback, useRef } from "react";
 import type { BlockComponentProps } from "@/components/editor/BlockRenderer";
 import { useAuth } from "@/contexts/AuthContext";
 import * as blocksApi from "@/api/blocks";
+import { sanitizeHtml } from "@/utils/sanitize";
 
 export default function CalloutBlock({
   block,
@@ -32,7 +33,7 @@ export default function CalloutBlock({
           contentEditable={authenticated}
           suppressContentEditableWarning
           dangerouslySetInnerHTML={{
-            __html: block.formatted_text ?? block.text ?? "",
+            __html: sanitizeHtml(block.formatted_text ?? block.text ?? ""),
           }}
           onBlur={handleBlur}
         />
