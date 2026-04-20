@@ -27,6 +27,14 @@ export default function EditorPage({
   const [doc, setDoc] = useState<DocumentPayload | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
+  // 콜백에서 최신 doc 을 참조하되 콜백 identity 는 유지하기 위한 ref.
+  // setDoc 할 때마다 deps 를 통해 콜백이 새 identity 로 재생성되면 하위
+  // BlockRenderer 전체 트리가 props 변화로 인해 무효 리렌더된다.
+  const docRef = useRef<DocumentPayload | null>(null);
+  useEffect(() => {
+    docRef.current = doc;
+  }, [doc]);
+
   const loadDocument = useCallback(async () => {
     try {
       const payload = await documentsApi.fetchDocument(documentId);
@@ -68,11 +76,12 @@ export default function EditorPage({
 
   const handleAddBlock = useCallback(
     async (type: BlockType, parentBlockId: string | null = null) => {
-      if (!doc) return;
-      await blocksApi.createBlock(doc.id, type, parentBlockId);
+      const cur = docRef.current;
+      if (!cur) return;
+      await blocksApi.createBlock(cur.id, type, parentBlockId);
       await loadDocument();
     },
-    [doc, loadDocument],
+    [loadDocument],
   );
 
   const handleAddBlockAfter = useCallback(
@@ -81,32 +90,36 @@ export default function EditorPage({
       afterBlockId: string,
       parentBlockId: string | null,
     ) => {
-      if (!doc) return;
+      const cur = docRef.current;
+      if (!cur) return;
       // BE 는 블록 생성 시 위치 지정을 지원하지 않으므로, 맨 끝에 생성한 뒤
       // moveBlock 으로 afterBlockId 의 "다음 형제" 위치로 이동시킨다.
-      // moveBlock 의 before_block_id 는 "이 블록의 바로 앞에 위치"를 의미하므로,
-      // afterBlockId 의 다음 블록 id 를 찾아 before 로 넘겨야 한다.
       const created = await blocksApi.createBlock(
-        doc.id,
+        cur.id,
         type,
         parentBlockId,
       );
 
       // 같은 부모 내의 형제 배열에서 afterBlockId 다음 블록을 탐색
       const siblings = parentBlockId
-        ? findChildren(doc.blocks, parentBlockId)
-        : doc.blocks;
+        ? findChildren(cur.blocks, parentBlockId)
+        : cur.blocks;
       const afterIdx = siblings.findIndex((b) => b.id === afterBlockId);
       const nextSibling = afterIdx >= 0 ? siblings[afterIdx + 1] : undefined;
-      const beforeId = nextSibling ? nextSibling.id : null;
 
       // 새 블록이 이미 맨 끝에 있다면 이동 불필요
       if (nextSibling) {
-        await blocksApi.moveBlock(created.id, beforeId);
+        await blocksApi.moveBlock(created.id, nextSibling.id);
       }
       await loadDocument();
     },
-    [doc, loadDocument],
+    [loadDocument],
+  );
+
+  // 페이지 블록 클릭 시 라우팅. useCallback 으로 identity 안정화.
+  const handleNavigate = useCallback(
+    (id: string) => navigate(`/docs/${id}`),
+    [navigate],
   );
 
   if (!doc) {
@@ -157,7 +170,7 @@ export default function EditorPage({
             onReloadSidebar={onReloadSidebar}
             onAddBlock={handleAddBlock}
             onAddBlockAfter={handleAddBlockAfter}
-            onNavigate={(id) => navigate(`/docs/${id}`)}
+            onNavigate={handleNavigate}
           />
         ))}
       </div>

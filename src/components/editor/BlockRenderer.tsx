@@ -4,7 +4,7 @@
 // Block 데이터를 받아 타입별 컴포넌트를 렌더링하고, 블록 래퍼
 // (드래그 핸들, 삽입 버튼, 더보기 메뉴)를 감싼다.
 
-import { useCallback } from "react";
+import { memo, useCallback } from "react";
 import type { Block, BlockType } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import TextBlock from "@/components/blocks/TextBlock";
@@ -67,7 +67,7 @@ interface BlockRendererProps {
   onNavigate: (docId: string) => void;
 }
 
-export default function BlockRenderer({
+function BlockRendererImpl({
   block,
   parentBlockId,
   onReload,
@@ -125,3 +125,11 @@ export default function BlockRenderer({
     </BlockWrapper>
   );
 }
+
+/**
+ * React.memo 로 래핑하여 block 참조와 콜백 identity 가 동일한 경우 재렌더를
+ * 생략한다. 낙관적 업데이트(Step C)와 결합 시 변경된 서브트리만 갱신되어
+ * 대형 문서에서 리렌더 비용이 크게 감소한다.
+ */
+const BlockRenderer = memo(BlockRendererImpl);
+export default BlockRenderer;
