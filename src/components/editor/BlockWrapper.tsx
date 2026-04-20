@@ -130,14 +130,14 @@ export default function BlockWrapper({
       {authenticated && (
         <div className="block-actions">
           {/* 드래그 핸들 */}
-          <span className="drag-handle" title="드래그하여 이동">
+          <span className="block-drag-handle" title="드래그하여 이동">
             &#x2630;
           </span>
 
           {/* 블록 삽입 버튼 */}
           <button
             type="button"
-            className="insert-block-btn"
+            className="block-insert-btn"
             title="아래에 블록 추가"
             onClick={() =>
               onAddBlockAfter("text", block.id, parentBlockId)
@@ -147,49 +147,49 @@ export default function BlockWrapper({
           </button>
 
           {/* 더보기 메뉴 */}
-          <button
-            type="button"
-            className="block-more-menu"
-            title="블록 메뉴"
-            onClick={() => setMenuOpen((m) => !m)}
-          >
-            &#8943;
-          </button>
+          <div className="block-more-wrap">
+            <button
+              type="button"
+              className="block-more-btn"
+              title="블록 메뉴"
+              onClick={() => setMenuOpen((m) => !m)}
+            >
+              &#8943;
+            </button>
+            {menuOpen && (
+              <div className="block-more-menu">
+                <div className="block-menu-section">
+                  <span className="block-menu-label">타입 변환</span>
+                  {BLOCK_TYPES.map((bt) => (
+                    <button
+                      key={bt.type}
+                      type="button"
+                      className={
+                        bt.type === block.type ? "is-active" : ""
+                      }
+                      onClick={() => handleTypeChange(bt.type)}
+                      disabled={bt.type === block.type}
+                    >
+                      {bt.label}
+                    </button>
+                  ))}
+                </div>
+                <hr />
+                <button
+                  type="button"
+                  className="block-menu-delete"
+                  onClick={handleDelete}
+                >
+                  삭제
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {/* 블록 콘텐츠 */}
       {children}
-
-      {/* 더보기 메뉴 패널 */}
-      {menuOpen && (
-        <div className="block-menu-panel">
-          <div className="block-menu-section">
-            <span className="block-menu-label">타입 변환</span>
-            {BLOCK_TYPES.map((bt) => (
-              <button
-                key={bt.type}
-                type="button"
-                className={
-                  bt.type === block.type ? "is-active" : ""
-                }
-                onClick={() => handleTypeChange(bt.type)}
-                disabled={bt.type === block.type}
-              >
-                {bt.label}
-              </button>
-            ))}
-          </div>
-          <hr />
-          <button
-            type="button"
-            className="block-menu-delete"
-            onClick={handleDelete}
-          >
-            삭제
-          </button>
-        </div>
-      )}
     </div>
   );
 }

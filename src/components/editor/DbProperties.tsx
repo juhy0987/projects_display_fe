@@ -25,9 +25,9 @@ export default function DbProperties({
   return (
     <div id="page-properties" className="page-properties">
       {columns.map((col) => (
-        <div key={col.id} className="property-row">
-          <span className="property-label">{col.name}</span>
-          <span className="property-value">
+        <div key={col.id} className="db-prop-row">
+          <span className="db-prop-label">{col.name}</span>
+          <span className="db-prop-value">
             {String(properties[col.id] ?? "")}
           </span>
         </div>

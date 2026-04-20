@@ -31,7 +31,7 @@ export default function ToggleBlock({
   }, [block.id]);
 
   return (
-    <div className="toggle-block" data-level={block.level ?? undefined}>
+    <div className="notion-toggle" data-level={block.level ?? undefined}>
       <div className="toggle-header">
         <button
           type="button"

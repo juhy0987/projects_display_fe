@@ -40,7 +40,7 @@ export default function UrlEmbedBlock({ block, onReload }: BlockComponentProps) 
 
   if (editing || !hasCard) {
     return (
-      <div className="url-embed-block url-embed-input-state">
+      <div className="notion-url-embed url-embed-input-state">
         <input
           type="url"
           className="url-embed-input"
@@ -66,7 +66,7 @@ export default function UrlEmbedBlock({ block, onReload }: BlockComponentProps) 
   }
 
   return (
-    <div className="url-embed-block">
+    <div className="notion-url-embed">
       <a
         className="url-embed-card"
         href={block.url}

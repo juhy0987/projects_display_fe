@@ -22,8 +22,8 @@ export default function CalloutBlock({
 
   return (
     <div
-      className="callout-block"
-      style={block.color ? { borderLeftColor: block.color } : undefined}
+      className="notion-callout"
+      data-color={block.color ?? undefined}
     >
       <span className="callout-emoji">{block.emoji ?? "💡"}</span>
       <div className="callout-body">

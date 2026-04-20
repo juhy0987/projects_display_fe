@@ -76,9 +76,11 @@ export default function CodeBlock({ block, onReload }: BlockComponentProps) {
     void navigator.clipboard.writeText(text);
   }, []);
 
+  const isMermaid = language === "mermaid";
+
   return (
-    <div className="code-block">
-      <div className="code-toolbar">
+    <div className={`notion-code${isMermaid ? " is-mermaid" : ""}`}>
+      <div className="code-header">
         <select
           className="code-language-select"
           value={language}
@@ -92,7 +94,7 @@ export default function CodeBlock({ block, onReload }: BlockComponentProps) {
           ))}
         </select>
 
-        {language === "mermaid" && (
+        {isMermaid && (
           <button
             type="button"
             className="mermaid-toggle-btn"
@@ -114,14 +116,14 @@ export default function CodeBlock({ block, onReload }: BlockComponentProps) {
 
       {showPreview && mermaidSvg ? (
         <div
-          className="mermaid-preview"
+          className="code-body mermaid-preview"
           dangerouslySetInnerHTML={{ __html: mermaidSvg }}
         />
       ) : (
-        <pre className="code-content">
+        <pre className="code-body">
           <code
             ref={codeRef}
-            className={language ? `language-${language}` : ""}
+            className={`code-content${language ? ` language-${language}` : ""}`}
             contentEditable={authenticated}
             suppressContentEditableWarning
             onBlur={handleBlur}

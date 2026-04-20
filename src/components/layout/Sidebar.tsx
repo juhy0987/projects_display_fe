@@ -59,7 +59,11 @@ export default function Sidebar({
         aria-controls="sidebar-panel"
         onClick={() => setCollapsed((c) => !c)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") setCollapsed((c) => !c);
+          if (e.key === "Enter" || e.key === " ") {
+            // Space 키는 기본적으로 페이지 스크롤을 트리거하므로 차단한다.
+            e.preventDefault();
+            setCollapsed((c) => !c);
+          }
         }}
       >
         <span className="sidebar-tab-chevron" />
@@ -157,33 +161,36 @@ function DocumentItem({
     onReload();
   }, [doc.id, doc.title, onReload]);
 
+  const nodeClass =
+    doc.node_type === "database"
+      ? " is-database-node"
+      : doc.node_type === "db_row"
+        ? " is-db-row"
+        : "";
+
   return (
-    <li>
+    <li className="document-row">
       <div
-        className={`document-item${activeDocId === doc.id ? " is-active" : ""}`}
+        className={`document-item${activeDocId === doc.id ? " is-active" : ""}${nodeClass}`}
         style={{ paddingLeft: `${12 + depth * 16}px` }}
       >
         {/* 접힘 토글 */}
-        {hasChildren ? (
-          <button
-            type="button"
-            className={`doc-toggle-btn${open ? " is-open" : ""}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              setOpen((o) => !o);
-            }}
-            aria-label="하위 문서 펼침/접힘"
-          >
-            &#9656;
-          </button>
-        ) : (
-          <span className="doc-toggle-spacer" />
-        )}
+        <button
+          type="button"
+          className={`document-toggle-btn${hasChildren ? " has-children" : ""}${open ? " is-expanded" : ""}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (hasChildren) setOpen((o) => !o);
+          }}
+          aria-label="하위 문서 펼침/접힘"
+          aria-expanded={open}
+          disabled={!hasChildren}
+        />
 
         {/* 아이콘 + 제목 */}
         {renaming ? (
           <input
-            className="doc-rename-input"
+            className="document-title-input"
             defaultValue={doc.title}
             autoFocus
             onBlur={(e) => handleRename(e.currentTarget.value)}
@@ -195,11 +202,11 @@ function DocumentItem({
         ) : (
           <button
             type="button"
-            className="doc-title-btn"
+            className="document-title-btn"
             onClick={() => onSelect(doc.id)}
           >
-            {icon && <span className="doc-icon">{icon}</span>}
-            <span className="doc-title-text">
+            {icon && <span className="document-item-icon">{icon}</span>}
+            <span className="document-title-text">
               {doc.title || "제목 없음"}
             </span>
           </button>
@@ -223,6 +230,7 @@ function DocumentItem({
               <div className="document-menu">
                 <button
                   type="button"
+                  className="document-menu-rename"
                   onClick={() => {
                     setMenuOpen(false);
                     setRenaming(true);
@@ -230,7 +238,11 @@ function DocumentItem({
                 >
                   이름 변경
                 </button>
-                <button type="button" onClick={handleDelete}>
+                <button
+                  type="button"
+                  className="document-menu-delete"
+                  onClick={handleDelete}
+                >
                   삭제
                 </button>
               </div>

@@ -21,7 +21,7 @@ export default function QuoteBlock({
   }, [block.id]);
 
   return (
-    <blockquote className="quote-block">
+    <blockquote className="notion-quote">
       <p
         ref={textRef}
         className="quote-text"

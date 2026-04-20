@@ -45,7 +45,7 @@ export default function ImageBlock({ block, onReload }: BlockComponentProps) {
 
   if (!hasImage) {
     return (
-      <figure className="notion-image empty-image">
+      <div className="notion-image-wrap is-empty">
         {uploading ? (
           <p className="upload-progress">업로드 중...</p>
         ) : (
@@ -68,14 +68,15 @@ export default function ImageBlock({ block, onReload }: BlockComponentProps) {
             </div>
           )
         )}
-      </figure>
+      </div>
     );
   }
 
   return (
     <>
-      <figure className="notion-image">
+      <div className="notion-image-wrap">
         <img
+          className="notion-image"
           src={block.url}
           alt={block.caption ?? ""}
           loading="lazy"
@@ -90,11 +91,11 @@ export default function ImageBlock({ block, onReload }: BlockComponentProps) {
         >
           {block.caption ?? ""}
         </figcaption>
-      </figure>
+      </div>
 
       {lightbox && (
         <div
-          className="lightbox-overlay"
+          className="image-lightbox-overlay"
           onClick={() => setLightbox(false)}
         >
           <img src={block.url} alt={block.caption ?? ""} />

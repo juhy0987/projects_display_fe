@@ -109,7 +109,7 @@ export default function FileBlock({ block, onReload }: BlockComponentProps) {
         {authenticated && (
           <button
             type="button"
-            className="file-delete-btn"
+            className="file-remove-btn"
             onClick={handleDelete}
           >
             삭제

@@ -57,7 +57,7 @@ export default function NotionImportModal({
 
         {!result ? (
           <div
-            className={`file-drop-zone notion-import-zone${dragOver ? " drag-over" : ""}`}
+            className={`notion-import-dropzone${dragOver ? " is-dragover" : ""}`}
             onClick={() => fileRef.current?.click()}
             onDragOver={(e) => {
               e.preventDefault();
