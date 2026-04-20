@@ -4,7 +4,8 @@
 // 기존 main.js 의 loadDocument + renderDocument 를 React 컴포넌트로 전환.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DocumentPayload, BlockType } from "@/types";
+import { useNavigate } from "react-router-dom";
+import type { Block, DocumentPayload, BlockType } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import * as documentsApi from "@/api/documents";
 import * as blocksApi from "@/api/blocks";
@@ -21,6 +22,7 @@ export default function EditorPage({
   onReloadSidebar,
 }: EditorPageProps) {
   const { authenticated } = useAuth();
+  const navigate = useNavigate();
   const [doc, setDoc] = useState<DocumentPayload | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
@@ -60,12 +62,32 @@ export default function EditorPage({
   const handleAddBlockAfter = useCallback(
     async (
       type: BlockType,
-      _afterBlockId: string,
+      afterBlockId: string,
       parentBlockId: string | null,
     ) => {
       if (!doc) return;
-      // BE 는 "after" 를 직접 지원하지 않으므로 create 후 reload 한���.
-      await blocksApi.createBlock(doc.id, type, parentBlockId);
+      // BE 는 블록 생성 시 위치 지정을 지원하지 않으므로, 맨 끝에 생성한 뒤
+      // moveBlock 으로 afterBlockId 의 "다음 형제" 위치로 이동시킨다.
+      // moveBlock 의 before_block_id 는 "이 블록의 바로 앞에 위치"를 의미하므로,
+      // afterBlockId 의 다음 블록 id 를 찾아 before 로 넘겨야 한다.
+      const created = await blocksApi.createBlock(
+        doc.id,
+        type,
+        parentBlockId,
+      );
+
+      // 같은 부모 내의 형제 배열에서 afterBlockId 다음 블록을 탐색
+      const siblings = parentBlockId
+        ? findChildren(doc.blocks, parentBlockId)
+        : doc.blocks;
+      const afterIdx = siblings.findIndex((b) => b.id === afterBlockId);
+      const nextSibling = afterIdx >= 0 ? siblings[afterIdx + 1] : undefined;
+      const beforeId = nextSibling ? nextSibling.id : null;
+
+      // 새 블록이 이미 맨 끝에 있다면 이동 불필요
+      if (nextSibling) {
+        await blocksApi.moveBlock(created.id, beforeId);
+      }
       await loadDocument();
     },
     [doc, loadDocument],
@@ -118,7 +140,7 @@ export default function EditorPage({
             onReloadSidebar={onReloadSidebar}
             onAddBlock={handleAddBlock}
             onAddBlockAfter={handleAddBlockAfter}
-            onNavigate={() => {}}
+            onNavigate={(id) => navigate(`/docs/${id}`)}
           />
         ))}
 
@@ -135,4 +157,16 @@ export default function EditorPage({
       </div>
     </section>
   );
+}
+
+/** 블록 트리에서 parentBlockId 에 해당하는 블록의 children 배열을 반환한다. */
+function findChildren(blocks: Block[], parentBlockId: string): Block[] {
+  for (const b of blocks) {
+    if (b.id === parentBlockId) return b.children;
+    const found = findChildren(b.children, parentBlockId);
+    if (found.length > 0 || b.children.some((c) => c.id === parentBlockId)) {
+      return found;
+    }
+  }
+  return [];
 }

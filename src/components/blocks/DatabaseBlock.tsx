@@ -3,7 +3,7 @@
 // 기존 databaseBlock.js 를 React 로 전환.
 // 테이블 형태로 컬럼/행 편집, 셀 값 수정, 컬럼 추가/삭제를 지원한다.
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { BlockComponentProps } from "@/components/editor/BlockRenderer";
 import type { DbColumn } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
@@ -161,6 +161,7 @@ interface DbCellProps {
 function DbCell({ column, value, editable, onChange }: DbCellProps) {
   const strVal = value != null ? String(value) : "";
 
+  // 체크박스/셀렉트는 즉시 저장(단일 클릭 상호작용이므로 부하/경쟁 문제 없음).
   if (column.type === "checkbox") {
     return (
       <td>
@@ -193,14 +194,40 @@ function DbCell({ column, value, editable, onChange }: DbCellProps) {
     );
   }
 
+  // 텍스트/숫자/날짜는 로컬 상태로 보관하고 onBlur 에서만 저장한다.
+  // 매 키스트로크마다 PATCH 를 날리면 서버 부하와 네트워크 지연으로 인한
+  // 레이스 컨디션(이전 요청이 늦게 도착하여 최신 값을 덮어씀)이 발생한다.
+  return <TextCell column={column} initialValue={strVal} editable={editable} onChange={onChange} />;
+}
+
+interface TextCellProps {
+  column: DbColumn;
+  initialValue: string;
+  editable: boolean;
+  onChange: (value: unknown) => void;
+}
+
+function TextCell({ column, initialValue, editable, onChange }: TextCellProps) {
+  const [local, setLocal] = useState(initialValue);
+
+  // 부모(행)의 서버 값이 바뀌면 로컬도 동기화
+  useEffect(() => {
+    setLocal(initialValue);
+  }, [initialValue]);
+
+  const inputType =
+    column.type === "number" ? "number" : column.type === "date" ? "date" : "text";
+
   return (
     <td>
       <input
-        type={column.type === "number" ? "number" : column.type === "date" ? "date" : "text"}
-        value={strVal}
+        type={inputType}
+        value={local}
         disabled={!editable}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={(e) => onChange(e.target.value)}
+        onChange={(e) => setLocal(e.target.value)}
+        onBlur={() => {
+          if (local !== initialValue) onChange(local);
+        }}
       />
     </td>
   );
