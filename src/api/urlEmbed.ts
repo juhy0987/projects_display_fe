@@ -1,4 +1,4 @@
-import { post } from "./client";
+import { postJson } from "./client";
 
 export interface UrlEmbedMeta {
   title: string;
@@ -14,5 +14,5 @@ export function fetchUrlEmbed(
 ): Promise<UrlEmbedMeta> {
   const body: Record<string, unknown> = { url };
   if (blockId !== null) body.block_id = blockId;
-  return post<UrlEmbedMeta>("/api/url-embed/fetch", body);
+  return postJson<UrlEmbedMeta>("/api/url-embed/fetch", body);
 }

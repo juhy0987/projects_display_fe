@@ -4,6 +4,12 @@
 // VITE_API_BASE_URL 환경변수가 설정되면 해당 값을 base 로 사용하고,
 // 미설정 시 상대 경로(/api/...)로 호출하여 Vite dev proxy 를 통과한다.
 // (Ref: https://vite.dev/guide/env-and-mode)
+//
+// 반환 타입 설계:
+// - JSON 응답을 기대하는 엔드포인트는 getJson/postJson/patchJson 을 사용하고,
+//   본문이 비어 있으면 명시적으로 에러를 던진다 (타입 거짓말 방지).
+// - 204 No Content 처럼 본문이 없는 엔드포인트는 postVoid/patchVoid/delVoid 를
+//   사용해 Promise<void> 를 반환받는다.
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -14,12 +20,18 @@ function checkPermission(res: Response): void {
   }
 }
 
-/** JSON body 를 포함하는 요청을 보낸다. */
-async function jsonRequest<T>(
+/** 실패 응답에서 detail 문자열을 추출한다. */
+async function extractError(res: Response, fallback: string): Promise<string> {
+  const err = await res.json().catch(() => ({}));
+  return (err as { detail?: string }).detail ?? fallback;
+}
+
+/** 공통 요청 실행 — 상태 검사와 에러 처리를 담당하고 Response 를 반환한다. */
+async function execute(
   path: string,
   method: string,
   body?: unknown,
-): Promise<T> {
+): Promise<Response> {
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers: body !== undefined ? { "Content-Type": "application/json" } : {},
@@ -28,17 +40,35 @@ async function jsonRequest<T>(
   });
   checkPermission(res);
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(
-      (err as { detail?: string }).detail ?? `요청 실패: ${method} ${path}`,
-    );
+    throw new Error(await extractError(res, `요청 실패: ${method} ${path}`));
   }
-  // 204 No Content 등 body 없는 응답 처리
-  const text = await res.text();
-  return text ? (JSON.parse(text) as T) : (undefined as unknown as T);
+  return res;
 }
 
-/** FormData body 를 포함하는 요청을 보낸다. */
+/** JSON 본문을 기대하는 요청. 본문이 비어 있으면 에러를 던진다. */
+async function requestJson<T>(
+  path: string,
+  method: string,
+  body?: unknown,
+): Promise<T> {
+  const res = await execute(path, method, body);
+  const text = await res.text();
+  if (!text) {
+    throw new Error(`빈 응답 본문: ${method} ${path}`);
+  }
+  return JSON.parse(text) as T;
+}
+
+/** 본문이 없는(204 등) 요청. */
+async function requestVoid(
+  path: string,
+  method: string,
+  body?: unknown,
+): Promise<void> {
+  await execute(path, method, body);
+}
+
+/** FormData 업로드 — 항상 JSON 응답을 기대한다. */
 async function formRequest<T>(path: string, body: FormData): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
@@ -47,29 +77,40 @@ async function formRequest<T>(path: string, body: FormData): Promise<T> {
   });
   checkPermission(res);
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(
-      (err as { detail?: string }).detail ?? `업로드 실패: ${path}`,
-    );
+    throw new Error(await extractError(res, `업로드 실패: ${path}`));
   }
-  return res.json() as Promise<T>;
+  return (await res.json()) as T;
 }
 
-export function get<T>(path: string): Promise<T> {
-  return jsonRequest<T>(path, "GET");
+// ── JSON 응답 헬퍼 ───────────────────────────────────────────────────────────
+
+export function getJson<T>(path: string): Promise<T> {
+  return requestJson<T>(path, "GET");
 }
 
-export function post<T>(path: string, body?: unknown): Promise<T> {
-  return jsonRequest<T>(path, "POST", body);
+export function postJson<T>(path: string, body?: unknown): Promise<T> {
+  return requestJson<T>(path, "POST", body);
 }
 
-export function patch<T>(path: string, body?: unknown): Promise<T> {
-  return jsonRequest<T>(path, "PATCH", body);
+export function patchJson<T>(path: string, body?: unknown): Promise<T> {
+  return requestJson<T>(path, "PATCH", body);
 }
 
-export function del<T>(path: string): Promise<T> {
-  return jsonRequest<T>(path, "DELETE");
+// ── void 응답 헬퍼 ──────────────────────────────────────────────────────────
+
+export function postVoid(path: string, body?: unknown): Promise<void> {
+  return requestVoid(path, "POST", body);
 }
+
+export function patchVoid(path: string, body?: unknown): Promise<void> {
+  return requestVoid(path, "PATCH", body);
+}
+
+export function delVoid(path: string): Promise<void> {
+  return requestVoid(path, "DELETE");
+}
+
+// ── 업로드 ──────────────────────────────────────────────────────────────────
 
 export function upload<T>(path: string, file: File, fieldName = "file"): Promise<T> {
   const form = new FormData();

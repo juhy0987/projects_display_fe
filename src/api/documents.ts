@@ -1,22 +1,22 @@
 import type { DocumentInfo, DocumentPayload } from "@/types";
-import { get, post, patch, del } from "./client";
+import { getJson, postJson, patchVoid, delVoid } from "./client";
 
 export function fetchDocuments(): Promise<DocumentInfo[]> {
-  return get<DocumentInfo[]>("/api/documents");
+  return getJson<DocumentInfo[]>("/api/documents");
 }
 
 export function fetchDocument(id: string): Promise<DocumentPayload> {
-  return get<DocumentPayload>(`/api/documents/${id}`);
+  return getJson<DocumentPayload>(`/api/documents/${id}`);
 }
 
 export function createDocument(): Promise<DocumentInfo> {
-  return post<DocumentInfo>("/api/documents");
+  return postJson<DocumentInfo>("/api/documents");
 }
 
 export function updateTitle(id: string, title: string): Promise<void> {
-  return patch<void>(`/api/documents/${id}`, { title });
+  return patchVoid(`/api/documents/${id}`, { title });
 }
 
 export function deleteDocument(id: string): Promise<void> {
-  return del<void>(`/api/documents/${id}`);
+  return delVoid(`/api/documents/${id}`);
 }

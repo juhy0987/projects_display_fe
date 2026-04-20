@@ -1,4 +1,4 @@
-import { upload, del } from "./client";
+import { upload, delVoid } from "./client";
 
 export interface ImageUploadResult {
   url: string;
@@ -21,5 +21,5 @@ export function uploadFile(file: File): Promise<FileUploadResult> {
 }
 
 export function deleteFile(fileId: string): Promise<void> {
-  return del<void>(`/api/files/${fileId}`);
+  return delVoid(`/api/files/${fileId}`);
 }
