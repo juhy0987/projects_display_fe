@@ -30,11 +30,26 @@ export default function EditorPage({
   const loadDocument = useCallback(async () => {
     try {
       const payload = await documentsApi.fetchDocument(documentId);
+
+      // 문서 불변: 마지막 루트 블록은 반드시 text 타입이어야 한다.
+      // 사용자가 다른 블록 뒤로 캐럿을 놓고 계속 타이핑할 수 있는 "꼬리
+      // 텍스트" 역할이므로, 문서가 비어 있거나 마지막이 text 가 아니면
+      // 즉시 text 블록을 추가하고 재조회한다. 서버 수정 권한이 필요하므로
+      // 인증된 사용자에 한정한다 (viewer 는 읽기 전용).
+      if (authenticated) {
+        const last = payload.blocks[payload.blocks.length - 1];
+        if (!last || last.type !== "text") {
+          await blocksApi.createBlock(documentId, "text");
+          const refreshed = await documentsApi.fetchDocument(documentId);
+          setDoc(refreshed);
+          return;
+        }
+      }
       setDoc(payload);
     } catch {
       setDoc(null);
     }
-  }, [documentId]);
+  }, [documentId, authenticated]);
 
   useEffect(() => {
     void loadDocument();
@@ -145,17 +160,6 @@ export default function EditorPage({
             onNavigate={(id) => navigate(`/docs/${id}`)}
           />
         ))}
-
-        {/* 빈 문서에 첫 블록 추가 버튼 */}
-        {authenticated && doc.blocks.length === 0 && (
-          <button
-            type="button"
-            className="add-first-block-btn"
-            onClick={() => handleAddBlock("text")}
-          >
-            + 블록 추가
-          </button>
-        )}
       </div>
     </section>
   );
