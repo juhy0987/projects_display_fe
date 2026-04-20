@@ -29,6 +29,7 @@ export default function CodeBlock({ block, onReload }: BlockComponentProps) {
   const codeRef = useRef<HTMLElement>(null);
   const [language, setLanguage] = useState(block.language ?? "");
   const [mermaidSvg, setMermaidSvg] = useState<string | null>(null);
+  const [mermaidError, setMermaidError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
 
   // 구문 강조 적용
@@ -42,18 +43,31 @@ export default function CodeBlock({ block, onReload }: BlockComponentProps) {
     }
   }, [block.code, language]);
 
-  // Mermaid 렌더링
-  useEffect(() => {
+  // Mermaid 렌더링 — 성공/에러 상태 분리 관리
+  const renderMermaid = useCallback(() => {
     if (language !== "mermaid" || !block.code) {
       setMermaidSvg(null);
+      setMermaidError(null);
       return;
     }
     const id = `mermaid-${block.id.replace(/[^a-zA-Z0-9]/g, "")}`;
     mermaid
       .render(id, block.code)
-      .then(({ svg }) => setMermaidSvg(svg))
-      .catch(() => setMermaidSvg(null));
+      .then(({ svg }) => {
+        setMermaidSvg(svg);
+        setMermaidError(null);
+      })
+      .catch((e: unknown) => {
+        setMermaidSvg(null);
+        setMermaidError(
+          e instanceof Error ? e.message : "다이어그램을 렌더링할 수 없습니다.",
+        );
+      });
   }, [block.id, block.code, language]);
+
+  useEffect(() => {
+    renderMermaid();
+  }, [renderMermaid]);
 
   const handleBlur = useCallback(async () => {
     const newCode = codeRef.current?.textContent ?? "";
@@ -114,24 +128,41 @@ export default function CodeBlock({ block, onReload }: BlockComponentProps) {
         </button>
       </div>
 
-      {showPreview && mermaidSvg ? (
+      {/* 코드 본문 — mermaid 미리보기 모드에서는 숨기되 DOM 은 유지 */}
+      <pre className="code-body" hidden={isMermaid && showPreview && !!mermaidSvg}>
+        <code
+          ref={codeRef}
+          className={`code-content${language ? ` language-${language}` : ""}`}
+          contentEditable={authenticated}
+          suppressContentEditableWarning
+          onBlur={handleBlur}
+        >
+          {block.code ?? ""}
+        </code>
+      </pre>
+
+      {/* Mermaid 미리보기 래퍼 — hover 시 .mermaid-actions 노출 */}
+      <div
+        className="mermaid-media-wrap"
+        hidden={!isMermaid || !showPreview || !mermaidSvg}
+      >
         <div
-          className="code-body mermaid-preview"
-          dangerouslySetInnerHTML={{ __html: mermaidSvg }}
+          className="mermaid-preview"
+          dangerouslySetInnerHTML={{ __html: mermaidSvg ?? "" }}
         />
-      ) : (
-        <pre className="code-body">
-          <code
-            ref={codeRef}
-            className={`code-content${language ? ` language-${language}` : ""}`}
-            contentEditable={authenticated}
-            suppressContentEditableWarning
-            onBlur={handleBlur}
-          >
-            {block.code ?? ""}
-          </code>
-        </pre>
-      )}
+      </div>
+
+      {/* Mermaid 구문 오류 */}
+      <div className="mermaid-error" hidden={!isMermaid || !mermaidError}>
+        <span className="mermaid-error-msg">{mermaidError}</span>
+        <button
+          type="button"
+          className="mermaid-retry-btn"
+          onClick={renderMermaid}
+        >
+          재시도
+        </button>
+      </div>
     </div>
   );
 }
