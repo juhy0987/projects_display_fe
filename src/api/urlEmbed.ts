@@ -1,11 +1,15 @@
 import { postJson } from "./client";
 
+/** POST /api/url-embed/fetch 응답. BE 의 UrlFetchResponse 와 1:1 대응. */
 export interface UrlEmbedMeta {
+  url: string;
   title: string;
   description: string;
-  image: string;
   logo: string;
-  url: string;
+  provider: string;
+  fetched_at: string;
+  status: "pending" | "success" | "error";
+  error: string;
 }
 
 export function fetchUrlEmbed(

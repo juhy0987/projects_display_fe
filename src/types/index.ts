@@ -78,11 +78,12 @@ export interface Block {
   file_size?: number;
   file_content_type?: string;
 
-  // url_embed
-  embed_title?: string;
-  embed_description?: string;
-  embed_image?: string;
-  embed_logo?: string;
+  // url_embed — BE 의 UrlEmbedBlock 모델 필드와 1:1 대응
+  description?: string;
+  logo?: string;       // 절대 URL (og:image / favicon 등)
+  provider?: string;   // www. 를 제거한 호스트네임
+  fetched_at?: string; // ISO-8601 UTC
+  status?: "pending" | "success" | "error";
 
   // database
   columns?: DbColumn[];
