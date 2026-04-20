@@ -64,6 +64,9 @@ interface BlockRendererProps {
     afterBlockId: string,
     parentBlockId: string | null,
   ) => void;
+  onMoveBlock: (blockId: string, beforeBlockId: string | null) => void;
+  onDeleteBlock: (blockId: string) => void;
+  onChangeBlockType: (blockId: string, newType: BlockType) => void;
   onNavigate: (docId: string) => void;
 }
 
@@ -74,6 +77,9 @@ function BlockRendererImpl({
   onReloadSidebar,
   onAddBlock,
   onAddBlockAfter,
+  onMoveBlock,
+  onDeleteBlock,
+  onChangeBlockType,
   onNavigate,
 }: BlockRendererProps) {
   const { authenticated } = useAuth();
@@ -90,10 +96,22 @@ function BlockRendererImpl({
           onReloadSidebar={onReloadSidebar}
           onAddBlock={onAddBlock}
           onAddBlockAfter={onAddBlockAfter}
+          onMoveBlock={onMoveBlock}
+          onDeleteBlock={onDeleteBlock}
+          onChangeBlockType={onChangeBlockType}
           onNavigate={onNavigate}
         />
       )),
-    [onReload, onReloadSidebar, onAddBlock, onAddBlockAfter, onNavigate],
+    [
+      onReload,
+      onReloadSidebar,
+      onAddBlock,
+      onAddBlockAfter,
+      onMoveBlock,
+      onDeleteBlock,
+      onChangeBlockType,
+      onNavigate,
+    ],
   );
 
   if (!Component) {
@@ -108,9 +126,10 @@ function BlockRendererImpl({
     <BlockWrapper
       block={block}
       parentBlockId={parentBlockId}
-      onReload={onReload}
-      onReloadSidebar={onReloadSidebar}
       onAddBlockAfter={onAddBlockAfter}
+      onMoveBlock={onMoveBlock}
+      onDeleteBlock={onDeleteBlock}
+      onChangeBlockType={onChangeBlockType}
       authenticated={authenticated}
     >
       <Component

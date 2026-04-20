@@ -1,7 +1,9 @@
 // -- 에디터 페이지 -----------------------------------------------------------
 //
 // 문서 상세 보기: 페이지 제목/부제, 프로퍼티, 블록 목록을 렌더링한다.
-// 기존 main.js 의 loadDocument + renderDocument 를 React 컴포넌트로 전환.
+// 기존 main.js 의 loadDocument + renderDocument 를 React 로 전환한 뒤,
+// 블록 CRUD 에 낙관적 업데이트(optimistic)를 도입하여 서버 응답을 기다리지
+// 않고 로컬 state 를 먼저 갱신한다. 실패 시 이전 스냅샷으로 롤백한다.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +12,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useInlineEdit } from "@/hooks/useInlineEdit";
 import * as documentsApi from "@/api/documents";
 import * as blocksApi from "@/api/blocks";
+import {
+  appendRootBlock,
+  insertBlockAfter,
+  lastRootIsText,
+  moveBlockInTree,
+  removeBlockById,
+} from "@/utils/blockTree";
 import BlockRenderer from "@/components/editor/BlockRenderer";
 import DbProperties from "@/components/editor/DbProperties";
 
@@ -28,8 +37,6 @@ export default function EditorPage({
   const titleRef = useRef<HTMLHeadingElement>(null);
 
   // 콜백에서 최신 doc 을 참조하되 콜백 identity 는 유지하기 위한 ref.
-  // setDoc 할 때마다 deps 를 통해 콜백이 새 identity 로 재생성되면 하위
-  // BlockRenderer 전체 트리가 props 변화로 인해 무효 리렌더된다.
   const docRef = useRef<DocumentPayload | null>(null);
   useEffect(() => {
     docRef.current = doc;
@@ -40,18 +47,10 @@ export default function EditorPage({
       const payload = await documentsApi.fetchDocument(documentId);
 
       // 문서 불변: 마지막 루트 블록은 반드시 text 타입이어야 한다.
-      // 사용자가 다른 블록 뒤로 캐럿을 놓고 계속 타이핑할 수 있는 "꼬리
-      // 텍스트" 역할이므로, 문서가 비어 있거나 마지막이 text 가 아니면
-      // 즉시 text 블록을 추가하고 재조회한다. 서버 수정 권한이 필요하므로
-      // 인증된 사용자에 한정한다 (viewer 는 읽기 전용).
-      if (authenticated) {
-        const last = payload.blocks[payload.blocks.length - 1];
-        if (!last || last.type !== "text") {
-          await blocksApi.createBlock(documentId, "text");
-          const refreshed = await documentsApi.fetchDocument(documentId);
-          setDoc(refreshed);
-          return;
-        }
+      if (authenticated && !lastRootIsText(payload.blocks)) {
+        const newBlock = await blocksApi.createBlock(documentId, "text");
+        setDoc({ ...payload, blocks: appendRootBlock(payload.blocks, newBlock) });
+        return;
       }
       setDoc(payload);
     } catch {
@@ -74,14 +73,53 @@ export default function EditorPage({
     }
   });
 
+  // -- 불변 보장 헬퍼 --------------------------------------------------------
+  // 낙관적 업데이트 이후 마지막 루트 블록이 text 가 아니면 BE 에 text 블록을
+  // 생성하고 로컬 state 에도 추가한다. 실패 시 조용히 무시 (다음 변경/재로드에서 재시도).
+  const ensureTrailingText = useCallback(async () => {
+    const cur = docRef.current;
+    if (!cur || !authenticated) return;
+    if (lastRootIsText(cur.blocks)) return;
+    try {
+      const newBlock = await blocksApi.createBlock(cur.id, "text");
+      setDoc((prev) =>
+        prev ? { ...prev, blocks: appendRootBlock(prev.blocks, newBlock) } : prev,
+      );
+    } catch {
+      // 서버 실패는 조용히 넘긴다 — 다음 변경/재로드 시 다시 시도된다.
+    }
+  }, [authenticated]);
+
+  // -- 낙관적 CRUD 핸들러 ----------------------------------------------------
+
   const handleAddBlock = useCallback(
     async (type: BlockType, parentBlockId: string | null = null) => {
       const cur = docRef.current;
       if (!cur) return;
-      await blocksApi.createBlock(cur.id, type, parentBlockId);
-      await loadDocument();
+      try {
+        const created = await blocksApi.createBlock(cur.id, type, parentBlockId);
+        // 서버가 실제 id 를 돌려주므로 그대로 로컬 state 에 반영한다.
+        setDoc((prev) => {
+          if (!prev) return prev;
+          if (parentBlockId === null) {
+            return { ...prev, blocks: appendRootBlock(prev.blocks, created) };
+          }
+          // 부모의 children 끝에 추가 — insertBlockAfter 를 응용
+          const addToParent = (arr: Block[]): Block[] =>
+            arr.map((b) => {
+              if (b.id === parentBlockId) {
+                return { ...b, children: [...b.children, created] };
+              }
+              return { ...b, children: addToParent(b.children) };
+            });
+          return { ...prev, blocks: addToParent(prev.blocks) };
+        });
+        void ensureTrailingText();
+      } catch {
+        await loadDocument();
+      }
     },
-    [loadDocument],
+    [ensureTrailingText, loadDocument],
   );
 
   const handleAddBlockAfter = useCallback(
@@ -92,31 +130,123 @@ export default function EditorPage({
     ) => {
       const cur = docRef.current;
       if (!cur) return;
-      // BE 는 블록 생성 시 위치 지정을 지원하지 않으므로, 맨 끝에 생성한 뒤
-      // moveBlock 으로 afterBlockId 의 "다음 형제" 위치로 이동시킨다.
-      const created = await blocksApi.createBlock(
-        cur.id,
-        type,
-        parentBlockId,
-      );
 
-      // 같은 부모 내의 형제 배열에서 afterBlockId 다음 블록을 탐색
-      const siblings = parentBlockId
-        ? (findChildren(cur.blocks, parentBlockId) ?? [])
-        : cur.blocks;
-      const afterIdx = siblings.findIndex((b) => b.id === afterBlockId);
-      const nextSibling = afterIdx >= 0 ? siblings[afterIdx + 1] : undefined;
+      try {
+        // BE 가 생성 위치를 지원하지 않으므로 맨 끝에 생성 후 moveBlock 으로
+        // afterBlockId 의 다음 형제 앞으로 재배치한다.
+        const created = await blocksApi.createBlock(cur.id, type, parentBlockId);
 
-      // 새 블록이 이미 맨 끝에 있다면 이동 불필요
-      if (nextSibling) {
-        await blocksApi.moveBlock(created.id, nextSibling.id);
+        const siblings = parentBlockId
+          ? (findChildren(cur.blocks, parentBlockId) ?? [])
+          : cur.blocks;
+        const afterIdx = siblings.findIndex((b) => b.id === afterBlockId);
+        const nextSibling = afterIdx >= 0 ? siblings[afterIdx + 1] : undefined;
+
+        if (nextSibling) {
+          await blocksApi.moveBlock(created.id, nextSibling.id);
+        }
+
+        // 로컬 state: afterBlockId 바로 뒤에 삽입
+        setDoc((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            blocks: insertBlockAfter(
+              prev.blocks,
+              afterBlockId,
+              created,
+              parentBlockId,
+            ),
+          };
+        });
+        void ensureTrailingText();
+      } catch {
+        await loadDocument();
       }
-      await loadDocument();
     },
-    [loadDocument],
+    [ensureTrailingText, loadDocument],
   );
 
-  // 페이지 블록 클릭 시 라우팅. useCallback 으로 identity 안정화.
+  const handleDeleteBlock = useCallback(
+    async (blockId: string) => {
+      const snapshot = docRef.current;
+      if (!snapshot) return;
+
+      // 삭제된 블록이 page/database/db_row 라면 사이드바 갱신 필요
+      const findType = (arr: Block[]): BlockType | null => {
+        for (const b of arr) {
+          if (b.id === blockId) return b.type;
+          const found = findType(b.children);
+          if (found) return found;
+        }
+        return null;
+      };
+      const victimType = findType(snapshot.blocks);
+
+      // 낙관적: 먼저 로컬에서 제거
+      setDoc((prev) =>
+        prev ? { ...prev, blocks: removeBlockById(prev.blocks, blockId) } : prev,
+      );
+
+      try {
+        await blocksApi.deleteBlock(blockId);
+        if (
+          victimType === "page" ||
+          victimType === "database" ||
+          victimType === "db_row"
+        ) {
+          onReloadSidebar();
+        }
+        void ensureTrailingText();
+      } catch {
+        // 롤백
+        setDoc(snapshot);
+      }
+    },
+    [ensureTrailingText, onReloadSidebar],
+  );
+
+  const handleMoveBlock = useCallback(
+    async (blockId: string, beforeBlockId: string | null) => {
+      const snapshot = docRef.current;
+      if (!snapshot) return;
+
+      setDoc((prev) =>
+        prev
+          ? { ...prev, blocks: moveBlockInTree(prev.blocks, blockId, beforeBlockId) }
+          : prev,
+      );
+
+      try {
+        await blocksApi.moveBlock(blockId, beforeBlockId);
+        void ensureTrailingText();
+      } catch {
+        setDoc(snapshot);
+      }
+    },
+    [ensureTrailingText],
+  );
+
+  const handleChangeBlockType = useCallback(
+    async (blockId: string, newType: BlockType) => {
+      const snapshot = docRef.current;
+      if (!snapshot) return;
+      try {
+        await blocksApi.changeBlockType(blockId, newType);
+        // 타입 변경은 서버가 content_json 구조를 재구성하므로, 해당 블록만
+        // 재조회하지 말고 단건 교체 대신 문서를 다시 로드한다.
+        // (type 에 따라 추가된 child_document 등 사이드 이펙트가 있을 수 있음)
+        await loadDocument();
+        if (newType === "page" || newType === "database") {
+          onReloadSidebar();
+        }
+      } catch {
+        setDoc(snapshot);
+      }
+    },
+    [loadDocument, onReloadSidebar],
+  );
+
   const handleNavigate = useCallback(
     (id: string) => navigate(`/docs/${id}`),
     [navigate],
@@ -154,10 +284,7 @@ export default function EditorPage({
       </header>
 
       {doc.db_context && (
-        <DbProperties
-          dbContext={doc.db_context}
-          onReload={loadDocument}
-        />
+        <DbProperties dbContext={doc.db_context} onReload={loadDocument} />
       )}
 
       <div id="block-root" className="block-root">
@@ -170,6 +297,9 @@ export default function EditorPage({
             onReloadSidebar={onReloadSidebar}
             onAddBlock={handleAddBlock}
             onAddBlockAfter={handleAddBlockAfter}
+            onMoveBlock={handleMoveBlock}
+            onDeleteBlock={handleDeleteBlock}
+            onChangeBlockType={handleChangeBlockType}
             onNavigate={handleNavigate}
           />
         ))}
@@ -181,11 +311,6 @@ export default function EditorPage({
 /**
  * 블록 트리에서 parentBlockId 에 해당하는 블록의 children 배열을 반환한다.
  * 찾지 못하면 null 을 반환한다 (빈 children 과 구분하기 위해 null 센티넬 사용).
- *
- * 이전 구현은 `found.length > 0` 로 발견 여부를 판정했으나, 대상 블록이
- * children=[] 인 경우와 "서브트리에서 미발견" 을 구분할 수 없어 깊숙이
- * 중첩된 빈-children 부모를 찾을 때 잘못된 ""(루트 배열)을 반환하는
- * 버그가 있었다.
  */
 function findChildren(
   blocks: Block[],

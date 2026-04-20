@@ -14,7 +14,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode, DragEvent } from "react";
 import type { Block, BlockType } from "@/types";
-import * as blocksApi from "@/api/blocks";
 
 /** 타입 변경 드롭다운에 표시할 블록 팔레트. 기존 blockPalette.js 와 동일. */
 const BLOCK_PALETTE_ITEMS: { type: BlockType; label: string; icon: string }[] = [
@@ -33,13 +32,17 @@ const BLOCK_PALETTE_ITEMS: { type: BlockType; label: string; icon: string }[] = 
 interface BlockWrapperProps {
   block: Block;
   parentBlockId: string | null;
-  onReload: () => void;
-  onReloadSidebar?: () => void;
   onAddBlockAfter: (
     type: BlockType,
     afterBlockId: string,
     parentBlockId: string | null,
   ) => void;
+  /** 드롭 완료 시 블록 이동을 요청한다 (EditorPage 가 낙관적 업데이트 담당). */
+  onMoveBlock: (blockId: string, beforeBlockId: string | null) => void;
+  /** 블록 삭제 요청. */
+  onDeleteBlock: (blockId: string) => void;
+  /** 타입 변경 요청. */
+  onChangeBlockType: (blockId: string, newType: BlockType) => void;
   authenticated: boolean;
   children: ReactNode;
 }
@@ -47,9 +50,10 @@ interface BlockWrapperProps {
 export default function BlockWrapper({
   block,
   parentBlockId,
-  onReload,
-  onReloadSidebar,
   onAddBlockAfter,
+  onMoveBlock,
+  onDeleteBlock,
+  onChangeBlockType,
   authenticated,
   children,
 }: BlockWrapperProps) {
@@ -169,10 +173,9 @@ export default function BlockWrapper({
             : null;
       }
 
-      await blocksApi.moveBlock(draggedId, beforeId);
-      onReload();
+      onMoveBlock(draggedId, beforeId);
     },
-    [block.id, onReload],
+    [block.id, onMoveBlock],
   );
 
   // -- 삽입 버튼 --
@@ -191,31 +194,20 @@ export default function BlockWrapper({
   const canChangeType = !isPageBlock && !isDbBlock;
 
   const handleTypeChange = useCallback(
-    async (newType: BlockType) => {
+    (newType: BlockType) => {
       setMenuOpen(false);
       if (newType === block.type) return;
-      await blocksApi.changeBlockType(block.id, newType);
-      onReload();
+      onChangeBlockType(block.id, newType);
     },
-    [block.id, block.type, onReload],
+    [block.id, block.type, onChangeBlockType],
   );
 
   // -- 삭제 --
-  const handleDelete = useCallback(async () => {
+  const handleDelete = useCallback(() => {
     setMenuOpen(false);
     if (!confirm("이 블록을 삭제하시겠습니까?")) return;
-    await blocksApi.deleteBlock(block.id);
-    // page/database/db_row 삭제는 사이드바 갱신 필요
-    const needsSidebar =
-      (block.type === "page" ||
-        block.type === "database" ||
-        block.type === "db_row") &&
-      onReloadSidebar;
-    if (needsSidebar) {
-      onReloadSidebar();
-    }
-    onReload();
-  }, [block.id, block.type, onReload, onReloadSidebar]);
+    onDeleteBlock(block.id);
+  }, [block.id, onDeleteBlock]);
 
   const dropClass =
     dropPos === "above"
