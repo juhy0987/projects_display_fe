@@ -1,6 +1,6 @@
 // -- 토글 블록 ---------------------------------------------------------------
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { BlockComponentProps } from "@/components/editor/BlockRenderer";
 import { useAuth } from "@/contexts/AuthContext";
 import * as blocksApi from "@/api/blocks";
@@ -13,7 +13,22 @@ export default function ToggleBlock({
 }: BlockComponentProps) {
   const { authenticated } = useAuth();
   const [open, setOpen] = useState(block.is_open ?? true);
+  const [editing, setEditing] = useState(false);
   const titleRef = useRef<HTMLDivElement>(null);
+  const originalHtml = useRef(block.formatted_text ?? block.text ?? "");
+
+  useEffect(() => {
+    if (!editing) return;
+    titleRef.current?.focus();
+    const sel = window.getSelection();
+    const range = document.createRange();
+    if (titleRef.current) {
+      range.selectNodeContents(titleRef.current);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+  }, [editing]);
 
   const handleToggle = useCallback(async () => {
     const next = !open;
@@ -21,17 +36,28 @@ export default function ToggleBlock({
     await blocksApi.patchBlock(block.id, { is_open: next });
   }, [block.id, open]);
 
+  const handleTitleClick = useCallback(() => {
+    if (!authenticated || editing) return;
+    setEditing(true);
+  }, [authenticated, editing]);
+
   const handleTitleBlur = useCallback(async () => {
-    const html = titleRef.current?.innerHTML ?? "";
-    const text = titleRef.current?.textContent ?? "";
-    await blocksApi.patchBlock(block.id, {
-      text,
-      formatted_text: html,
-    });
-  }, [block.id]);
+    if (!editing) return;
+    setEditing(false);
+    const el = titleRef.current;
+    if (!el) return;
+    const html = sanitizeHtml(el.innerHTML);
+    const text = el.textContent ?? "";
+    if (html === originalHtml.current) return;
+    await blocksApi.patchBlock(block.id, { text, formatted_text: html });
+    originalHtml.current = html;
+  }, [block.id, editing]);
 
   return (
-    <div className="notion-block notion-toggle" data-level={block.level ?? undefined}>
+    <div
+      className={`notion-block notion-toggle${editing ? " is-editing" : ""}`}
+      data-level={block.level ?? undefined}
+    >
       <div className="toggle-header">
         <button
           type="button"
@@ -45,11 +71,12 @@ export default function ToggleBlock({
         <div
           ref={titleRef}
           className="toggle-title"
-          contentEditable={authenticated}
+          contentEditable={editing}
           suppressContentEditableWarning
           dangerouslySetInnerHTML={{
             __html: sanitizeHtml(block.formatted_text ?? block.text ?? ""),
           }}
+          onClick={handleTitleClick}
           onBlur={handleTitleBlur}
         />
       </div>

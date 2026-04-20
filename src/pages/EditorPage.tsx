@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Block, DocumentPayload, BlockType } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { useInlineEdit } from "@/hooks/useInlineEdit";
 import * as documentsApi from "@/api/documents";
 import * as blocksApi from "@/api/blocks";
 import BlockRenderer from "@/components/editor/BlockRenderer";
@@ -40,7 +41,7 @@ export default function EditorPage({
   }, [loadDocument]);
 
   // 제목 편집 후 blur 시 저장
-  const handleTitleBlur = useCallback(async () => {
+  const titleEdit = useInlineEdit(authenticated, async () => {
     if (!doc || !titleRef.current) return;
     const newTitle = titleRef.current.textContent?.trim() ?? "";
     if (newTitle !== doc.title) {
@@ -48,7 +49,7 @@ export default function EditorPage({
       setDoc((prev) => (prev ? { ...prev, title: newTitle } : prev));
       onReloadSidebar();
     }
-  }, [doc, onReloadSidebar]);
+  });
 
   const handleAddBlock = useCallback(
     async (type: BlockType, parentBlockId: string | null = null) => {
@@ -108,9 +109,10 @@ export default function EditorPage({
         <h1
           ref={titleRef}
           id="page-title"
-          contentEditable={authenticated}
+          contentEditable={titleEdit.contentEditable}
           suppressContentEditableWarning
-          onBlur={handleTitleBlur}
+          onClick={titleEdit.onClick}
+          onBlur={titleEdit.onBlur}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();

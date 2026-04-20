@@ -13,6 +13,7 @@
 //     button.image-lightbox-close
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useInlineEdit } from "@/hooks/useInlineEdit";
 import type { BlockComponentProps } from "@/components/editor/BlockRenderer";
 import { useAuth } from "@/contexts/AuthContext";
 import * as blocksApi from "@/api/blocks";
@@ -48,12 +49,12 @@ export default function ImageBlock({ block, onReload }: BlockComponentProps) {
     [block.id, onReload],
   );
 
-  const handleCaptionBlur = useCallback(async () => {
+  const caption = useInlineEdit(authenticated, async () => {
     const text = captionRef.current?.textContent ?? "";
     if (text !== captionText) {
       await blocksApi.patchBlock(block.id, { caption: text });
     }
-  }, [block.id, captionText]);
+  });
 
   // 라이트박스 오픈 시 스크롤 잠금 + Escape 닫기
   useEffect(() => {
@@ -136,9 +137,10 @@ export default function ImageBlock({ block, onReload }: BlockComponentProps) {
           ref={captionRef}
           className={`notion-caption${captionEmpty ? " is-empty" : ""}`}
           data-placeholder="캡션을 입력하세요"
-          contentEditable={authenticated}
+          contentEditable={caption.contentEditable}
           suppressContentEditableWarning
-          onBlur={handleCaptionBlur}
+          onClick={caption.onClick}
+          onBlur={caption.onBlur}
         >
           {captionText}
         </figcaption>

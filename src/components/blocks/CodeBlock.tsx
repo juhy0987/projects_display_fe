@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { BlockComponentProps } from "@/components/editor/BlockRenderer";
 import { useAuth } from "@/contexts/AuthContext";
+import { useInlineEdit } from "@/hooks/useInlineEdit";
 import * as blocksApi from "@/api/blocks";
 
 declare const hljs: {
@@ -69,12 +70,12 @@ export default function CodeBlock({ block, onReload }: BlockComponentProps) {
     renderMermaid();
   }, [renderMermaid]);
 
-  const handleBlur = useCallback(async () => {
+  const edit = useInlineEdit(authenticated, async () => {
     const newCode = codeRef.current?.textContent ?? "";
     if (newCode !== (block.code ?? "")) {
       await blocksApi.patchBlock(block.id, { code: newCode });
     }
-  }, [block.id, block.code]);
+  });
 
   const handleLanguageChange = useCallback(
     async (lang: string) => {
@@ -93,7 +94,9 @@ export default function CodeBlock({ block, onReload }: BlockComponentProps) {
   const isMermaid = language === "mermaid";
 
   return (
-    <div className={`notion-block notion-code${isMermaid ? " is-mermaid" : ""}`}>
+    <div
+      className={`notion-block notion-code${isMermaid ? " is-mermaid" : ""}${edit.editingClass}`}
+    >
       <div className="code-header">
         <select
           className="code-language-select"
@@ -133,9 +136,10 @@ export default function CodeBlock({ block, onReload }: BlockComponentProps) {
         <code
           ref={codeRef}
           className={`code-content${language ? ` language-${language}` : ""}`}
-          contentEditable={authenticated}
+          contentEditable={edit.contentEditable}
           suppressContentEditableWarning
-          onBlur={handleBlur}
+          onClick={edit.onClick}
+          onBlur={edit.onBlur}
         >
           {block.code ?? ""}
         </code>
