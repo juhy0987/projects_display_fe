@@ -102,7 +102,7 @@ export default function EditorPage({
 
       // 같은 부모 내의 형제 배열에서 afterBlockId 다음 블록을 탐색
       const siblings = parentBlockId
-        ? findChildren(cur.blocks, parentBlockId)
+        ? (findChildren(cur.blocks, parentBlockId) ?? [])
         : cur.blocks;
       const afterIdx = siblings.findIndex((b) => b.id === afterBlockId);
       const nextSibling = afterIdx >= 0 ? siblings[afterIdx + 1] : undefined;
@@ -178,14 +178,23 @@ export default function EditorPage({
   );
 }
 
-/** 블록 트리에서 parentBlockId 에 해당하는 블록의 children 배열을 반환한다. */
-function findChildren(blocks: Block[], parentBlockId: string): Block[] {
+/**
+ * 블록 트리에서 parentBlockId 에 해당하는 블록의 children 배열을 반환한다.
+ * 찾지 못하면 null 을 반환한다 (빈 children 과 구분하기 위해 null 센티넬 사용).
+ *
+ * 이전 구현은 `found.length > 0` 로 발견 여부를 판정했으나, 대상 블록이
+ * children=[] 인 경우와 "서브트리에서 미발견" 을 구분할 수 없어 깊숙이
+ * 중첩된 빈-children 부모를 찾을 때 잘못된 ""(루트 배열)을 반환하는
+ * 버그가 있었다.
+ */
+function findChildren(
+  blocks: Block[],
+  parentBlockId: string,
+): Block[] | null {
   for (const b of blocks) {
     if (b.id === parentBlockId) return b.children;
     const found = findChildren(b.children, parentBlockId);
-    if (found.length > 0 || b.children.some((c) => c.id === parentBlockId)) {
-      return found;
-    }
+    if (found !== null) return found;
   }
-  return [];
+  return null;
 }
