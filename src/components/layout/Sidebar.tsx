@@ -169,11 +169,9 @@ function DocumentItem({
         : "";
 
   return (
-    <li className="document-row">
-      <div
-        className={`document-item${activeDocId === doc.id ? " is-active" : ""}${nodeClass}`}
-        style={{ paddingLeft: `${12 + depth * 16}px` }}
-      >
+    <li style={{ paddingLeft: `${depth * 16}px` }}>
+      {/* 한 줄 레이아웃: 토글 + (.document-item 은 제목 버튼 자체) + 메뉴 */}
+      <div className="document-row">
         {/* 접힘 토글 */}
         <button
           type="button"
@@ -187,7 +185,7 @@ function DocumentItem({
           disabled={!hasChildren}
         />
 
-        {/* 아이콘 + 제목 */}
+        {/* 문서 제목 — global.css 의 .document-item 은 제목 버튼 그 자체이다 */}
         {renaming ? (
           <input
             className="document-title-input"
@@ -202,19 +200,17 @@ function DocumentItem({
         ) : (
           <button
             type="button"
-            className="document-title-btn"
+            className={`document-item${activeDocId === doc.id ? " is-active" : ""}${nodeClass}`}
             onClick={() => onSelect(doc.id)}
           >
             {icon && <span className="document-item-icon">{icon}</span>}
-            <span className="document-title-text">
-              {doc.title || "제목 없음"}
-            </span>
+            {doc.title || "제목 없음"}
           </button>
         )}
 
         {/* 더보기 메뉴 */}
         {authenticated && doc.node_type !== "db_row" && (
-          <div className="document-menu-wrapper">
+          <>
             <button
               type="button"
               className="document-menu-btn"
@@ -247,7 +243,7 @@ function DocumentItem({
                 </button>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
 

@@ -55,12 +55,15 @@ export default function DatabaseBlock({ block, onReload, onReloadSidebar }: Bloc
   }, [block.document_id, block.id, onReload]);
 
   return (
-    <div className="database-block" style={block.color ? { borderColor: block.color } : undefined}>
+    <div
+      className="notion-database"
+      style={block.color ? { borderColor: block.color } : undefined}
+    >
       {/* 데이터베이스 제목 */}
-      <div className="database-title-row">
+      <div className="db-title-row">
         {editingTitle ? (
           <input
-            className="database-title-input"
+            className="db-title-input"
             value={title}
             autoFocus
             onChange={(e) => setTitle(e.target.value)}
@@ -70,24 +73,25 @@ export default function DatabaseBlock({ block, onReload, onReloadSidebar }: Bloc
             }}
           />
         ) : (
-          <h3
-            className="database-title"
+          <input
+            className="db-title-input"
+            value={title || ""}
+            readOnly
+            placeholder="제목 없음"
             onClick={() => authenticated && setEditingTitle(true)}
-          >
-            {title || "제목 없음"}
-          </h3>
+          />
         )}
       </div>
 
       {/* 테이블 */}
-      <div className="database-table-wrapper">
-        <table className="database-table">
+      <div className="db-table-wrap">
+        <table className="db-table">
           <thead>
             <tr>
-              <th className="db-title-col">제목</th>
+              <th className="db-th db-th-title">제목</th>
               {columns.map((col) => (
-                <th key={col.id}>
-                  <span>{col.name}</span>
+                <th key={col.id} className="db-th">
+                  <span className="db-col-name">{col.name}</span>
                   {authenticated && (
                     <button
                       type="button"
@@ -101,7 +105,7 @@ export default function DatabaseBlock({ block, onReload, onReloadSidebar }: Bloc
                 </th>
               ))}
               {authenticated && (
-                <th>
+                <th className="db-th db-th-add">
                   <button
                     type="button"
                     className="db-add-col-btn"
@@ -116,8 +120,10 @@ export default function DatabaseBlock({ block, onReload, onReloadSidebar }: Bloc
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.block_id}>
-                <td className="db-title-col">{row.title || "제목 없음"}</td>
+              <tr key={row.block_id} className="db-row">
+                <td className="db-td db-td-title">
+                  {row.title || "제목 없음"}
+                </td>
                 {columns.map((col) => (
                   <DbCell
                     key={col.id}
@@ -129,7 +135,7 @@ export default function DatabaseBlock({ block, onReload, onReloadSidebar }: Bloc
                     }
                   />
                 ))}
-                {authenticated && <td />}
+                {authenticated && <td className="db-td" />}
               </tr>
             ))}
           </tbody>
@@ -164,9 +170,10 @@ function DbCell({ column, value, editable, onChange }: DbCellProps) {
   // 체크박스/셀렉트는 즉시 저장(단일 클릭 상호작용이므로 부하/경쟁 문제 없음).
   if (column.type === "checkbox") {
     return (
-      <td>
+      <td className="db-td">
         <input
           type="checkbox"
+          className="db-cell-checkbox"
           checked={!!value}
           disabled={!editable}
           onChange={(e) => onChange(e.target.checked)}
@@ -177,8 +184,9 @@ function DbCell({ column, value, editable, onChange }: DbCellProps) {
 
   if (column.type === "select" && column.options?.length) {
     return (
-      <td>
+      <td className="db-td">
         <select
+          className="db-cell-input"
           value={strVal}
           disabled={!editable}
           onChange={(e) => onChange(e.target.value)}
@@ -219,8 +227,9 @@ function TextCell({ column, initialValue, editable, onChange }: TextCellProps) {
     column.type === "number" ? "number" : column.type === "date" ? "date" : "text";
 
   return (
-    <td>
+    <td className="db-td">
       <input
+        className="db-cell-input"
         type={inputType}
         value={local}
         disabled={!editable}

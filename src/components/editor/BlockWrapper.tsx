@@ -158,26 +158,22 @@ export default function BlockWrapper({
             </button>
             {menuOpen && (
               <div className="block-more-menu">
-                <div className="block-menu-section">
-                  <span className="block-menu-label">타입 변환</span>
-                  {BLOCK_TYPES.map((bt) => (
-                    <button
-                      key={bt.type}
-                      type="button"
-                      className={
-                        bt.type === block.type ? "is-active" : ""
-                      }
-                      onClick={() => handleTypeChange(bt.type)}
-                      disabled={bt.type === block.type}
-                    >
-                      {bt.label}
-                    </button>
-                  ))}
-                </div>
-                <hr />
+                <div className="block-menu-section-label">타입 변환</div>
+                {BLOCK_TYPES.map((bt) => (
+                  <button
+                    key={bt.type}
+                    type="button"
+                    className={`block-change-type-btn${bt.type === block.type ? " is-current" : ""}`}
+                    onClick={() => handleTypeChange(bt.type)}
+                    disabled={bt.type === block.type}
+                  >
+                    {bt.label}
+                  </button>
+                ))}
+                <div className="block-menu-divider" />
                 <button
                   type="button"
-                  className="block-menu-delete"
+                  className="block-delete-btn"
                   onClick={handleDelete}
                 >
                   삭제
