@@ -2,6 +2,8 @@
   --paper: #f6f2e9;
   --paper-deep: #e9dfca;
   --ink: #212329;
+  /* --ink-main: .document-menu-rename / caret-color 등에서 참조되는 별칭. --ink 와 동일값 유지. */
+  --ink-main: #212329;
   --ink-soft: #5c6370;
   --line: #d8cdb8;
   --accent: #00706d;

@@ -104,7 +104,7 @@ describe("AuthContext", () => {
     });
   });
 
-  it("logout 호출 시 미인증 상태로 전��된다", async () => {
+  it("logout 호출 시 미인증 상태로 전환된다", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
