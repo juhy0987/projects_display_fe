@@ -42,7 +42,14 @@ done
 # 2) comment_id 들을 jq IN() 매칭용 quoted 리스트로 변환
 ids_quoted=$(printf '"%s",' "$@" | sed 's/,$//')
 
-# 3) review thread 전수 조회 → 우리 comment_id 가 첫 댓글인 thread 들의 thread_id 추출
+# 3) review thread 전수 조회 → 우리 comment_id 가 thread 의 어느 위치(첫 댓글이든 reply 든)
+#    에 있는 thread 들의 thread_id 추출.
+#
+# 한계: reviewThreads(first: 100) 는 본 저장소 규모 (PR 당 평균 30~70 thread) 에서 충분하다.
+# 1개 PR 에 100개 초과 thread 가 생기는 케이스가 발생하면 GraphQL cursor pagination 으로 보강 필요.
+#
+# comments(first: 100) — thread 안의 모든 답글까지 가져와서, comment_id 가 첫 댓글이 아닌
+# 답글 위치에 있어도 매칭되도록 한다 (PR #9 gemini 피드백 반영).
 thread_ids=$(gh api graphql -f query="
 {
   repository(owner: \"${owner}\", name: \"${name}\") {
@@ -50,7 +57,7 @@ thread_ids=$(gh api graphql -f query="
       reviewThreads(first: 100) {
         nodes {
           id
-          comments(first: 1) {
+          comments(first: 100) {
             nodes { databaseId }
           }
         }
@@ -58,7 +65,7 @@ thread_ids=$(gh api graphql -f query="
     }
   }
 }" --jq ".data.repository.pullRequest.reviewThreads.nodes[]
-         | select(.comments.nodes[0].databaseId | tostring | IN(${ids_quoted}))
+         | select(.comments.nodes[].databaseId | tostring | IN(${ids_quoted}))
          | .id")
 
 # 4) 각 thread resolve
