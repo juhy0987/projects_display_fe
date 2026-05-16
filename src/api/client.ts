@@ -13,6 +13,11 @@
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
+// anchor href / 이미지 src 등 fetch 래퍼를 거치지 않는 직접 URL 에 BASE 를 붙인다.
+export function apiUrl(path: string): string {
+  return `${BASE}${path}`;
+}
+
 /** 403 응답 시 사용자 안내 에러를 던진다. */
 function checkPermission(res: Response): void {
   if (res.status === 403) {
