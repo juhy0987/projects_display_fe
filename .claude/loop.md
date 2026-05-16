@@ -1,0 +1,70 @@
+# PR 피드백 순환 처리 (FE)
+
+## 대상
+현재 브랜치에 연결된 열린 PR의 CI 상태와 리뷰 코멘트를 처리한다.
+
+## 절차
+1. `gh pr view --json number,url,statusCheckRollup` 로 현재 PR 과 CI rollup 을 함께 조회
+2. **CI 실패 확인 (코멘트 처리보다 우선)**
+   - `statusCheckRollup` 항목 중 `conclusion == "FAILURE"` 인 GitHub Actions check_run 이 있으면, 실패 job 의 로그를 수집해 우선 복구
+     - 실패 job 식별: `gh pr checks <PR번호>`
+     - 로그 수집: `gh run view <runId> --log-failed`
+     - 원인 분석 → 코드/설정 수정 → 커밋 → 푸시
+   - `IN_PROGRESS` / `QUEUED` / `PENDING` 만 있고 FAILURE 가 없으면 코멘트 처리는 계속 진행
+   - 모두 `SUCCESS` / `NEUTRAL` / `SKIPPED` 면 정상 진행
+3. `gh api repos/{owner}/{repo}/pulls/{number}/comments` 로 리뷰 코멘트 수집
+4. 👀 리액션이 달린 코멘트는 처리 완료로 건너뛴다
+5. 새 코멘트가 없으면 "새 피드백 없음" 출력 후 종료
+
+## 선별 기준
+1. 비즈니스 로직 오류 또는 버그 가능성
+2. 보안 (XSS, dangerouslySetInnerHTML, 비밀 노출) 및 성능 (불필요 리렌더, 메모리 누수)
+3. 아키텍처 일관성 (페이지/컴포넌트/훅/API 경계 위반)
+
+단순 스타일·오타 지적은 제외한다.
+
+## 처리 방식
+- 의도가 명확한 피드백 → 코드 수정 + 커밋 + 푸시
+- 의도가 불명확한 피드백 → PR 에 질문 코멘트, 질문 주체를 `@` 로 멘션
+- 처리 완료한 코멘트에 👀 리액션 추가, Resolve conversation
+  - **일괄 처리는 헬퍼 스크립트 사용** — 1회 호출로 reaction + resolve 모두 수행:
+    ```bash
+    scripts/pr-resolve-comments.sh <PR번호> <comment_id1> [<comment_id2> ...]
+    ```
+    예: `scripts/pr-resolve-comments.sh 2 3097643287 3097643293 3097643295`
+    각 회차에서 처리한 모든 comment_id 를 한 번에 전달 — 개별 `gh api` 호출 회피.
+
+## 커밋 규칙
+- 메시지 형식
+  - 리뷰 피드백 반영: `[FIX]: 피드백 반영, {변경 요약}`
+  - CI 실패 복구: `[FIX]: CI 복구, {실패 job 이름} - {변경 요약}`
+- 한국어로 작성
+
+## 자동 중단 (CI 완료 후 2회 연속 무동작 시)
+
+상태 파일: `/tmp/projects-display-fe-loop-state.json`
+
+스키마:
+```json
+{
+  "<PR번호>": {
+    "idle_streak": 0,
+    "last_run_at": "2026-05-16T00:00:00Z"
+  }
+}
+```
+
+### 회차 분류
+
+- **active**: CI 복구 / 피드백 반영 / 새 질문 / 신규 코멘트에 👀 — `idle_streak = 0`
+- **pending**: CI 진행 중 + 신규 코멘트 없음 — 카운터 동결
+- **idle**: "새 피드백 없음" — `idle_streak += 1`
+
+판단 모호 시 active.
+
+### 카운터 갱신 + 종료
+1. 상태 파일 read
+2. `idle_streak` 갱신
+3. `last_run_at` 갱신 (ISO8601)
+4. 상태 파일 write
+5. `idle_streak >= 2` → 자동 종료 (CronList → CronDelete + 상태 항목 제거 + 사용자 알림)
