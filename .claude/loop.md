@@ -80,8 +80,16 @@ CronCreate({
 판단 모호 시 active.
 
 ### 카운터 갱신 + 종료
-1. 상태 파일 read
-2. `idle_streak` 갱신
-3. `last_run_at` 갱신 (ISO8601)
-4. 상태 파일 write
-5. `idle_streak >= 2` → 자동 종료 (CronList → CronDelete + 상태 항목 제거 + 사용자 알림)
+
+상태 파일 read / write 와 분류 적용은 헬퍼 스크립트로 일원화한다 — **인라인 jq heredoc 금지**:
+
+```bash
+scripts/loop-state.sh <PR번호> <active|pending|idle>
+```
+
+- stdout 으로 갱신 후 `idle_streak` 값 출력
+- exit code `0` → 계속 진행
+- exit code `10` → 자동 종료 임계값(`idle_streak ≥ 2`) 도달 — 호출자가 다음을 수행:
+  1. `CronList` 로 본 PR 번호가 포함된 loop cron 식별
+  2. 매칭 cron ID 로 `CronDelete`
+  3. 사용자에게 한 줄 알림: `"CI 완료 후 <streak>회 연속 무동작으로 PR #<N> loop 자동 종료 (cron <id>)"`
