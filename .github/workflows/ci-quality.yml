@@ -1,0 +1,93 @@
+name: CI - Quality
+
+# TypeScript / React 코드 품질 검사 워크플로
+# Convention 검증(커밋·PR 타이틀 형식)은 ci-convention.yml 에 분리되어 있습니다.
+# job `name:` 값은 GitHub Required Status Check 컨텍스트로 사용되므로 변경 금지
+# (docs/ci/status-checks.md 단일 소스 참조).
+#
+# 트리거:
+#   - pull_request: PR 머지 게이트 (Required Status Check)
+#   - push to main: 머지 후 회귀 sanity-check (별도 단일-job ci.yml 폐지, 본 워크플로로 일원화)
+
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: tsc --noEmit
+        run: npm run typecheck
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Vitest
+        run: npm test
