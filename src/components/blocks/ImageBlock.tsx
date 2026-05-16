@@ -18,6 +18,7 @@ import type { BlockComponentProps } from "@/components/editor/BlockRenderer";
 import { useAuth } from "@/contexts/AuthContext";
 import * as blocksApi from "@/api/blocks";
 import * as uploadApi from "@/api/upload";
+import { apiUrl } from "@/api/client";
 
 export default function ImageBlock({ block, onReload }: BlockComponentProps) {
   const { authenticated } = useAuth();
@@ -105,7 +106,7 @@ export default function ImageBlock({ block, onReload }: BlockComponentProps) {
         <div className="image-media-wrap">
           <img
             className="notion-image"
-            src={block.url}
+            src={apiUrl(block.url ?? "")}
             alt={captionText}
             loading="lazy"
             onClick={() => setLightbox(true)}
@@ -153,7 +154,7 @@ export default function ImageBlock({ block, onReload }: BlockComponentProps) {
         >
           <img
             className="image-lightbox-img"
-            src={block.url}
+            src={apiUrl(block.url ?? "")}
             alt={captionText}
           />
           <button

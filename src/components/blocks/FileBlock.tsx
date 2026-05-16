@@ -22,6 +22,7 @@ import type { BlockComponentProps } from "@/components/editor/BlockRenderer";
 import { useAuth } from "@/contexts/AuthContext";
 import * as blocksApi from "@/api/blocks";
 import * as uploadApi from "@/api/upload";
+import { apiUrl } from "@/api/client";
 
 export default function FileBlock({ block, onReload }: BlockComponentProps) {
   const { authenticated } = useAuth();
@@ -135,7 +136,7 @@ export default function FileBlock({ block, onReload }: BlockComponentProps) {
         </div>
         <a
           className="file-download-btn"
-          href={`/api/files/${block.file_id}`}
+          href={apiUrl(`/api/files/${block.file_id}`)}
           download={block.file_name}
         >
           다운로드

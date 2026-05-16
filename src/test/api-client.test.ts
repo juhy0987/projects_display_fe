@@ -1,7 +1,7 @@
 // -- API client 단위 테스트 ---------------------------------------------------
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getJson, postJson, patchJson, patchVoid, delVoid } from "@/api/client";
+import { apiUrl, getJson, postJson, patchJson, patchVoid, delVoid } from "@/api/client";
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
@@ -100,5 +100,22 @@ describe("API client", () => {
     });
 
     await expect(getJson("/api/empty")).rejects.toThrow("빈 응답 본문");
+  });
+
+  describe("apiUrl()", () => {
+    it("상대 경로는 BASE prefix 가 붙는다 (BASE 가 빈 dev 환경에서는 경로 그대로)", () => {
+      expect(apiUrl("/api/files/1")).toBe("/api/files/1");
+      expect(apiUrl("/static/uploads/x.webp")).toBe("/static/uploads/x.webp");
+    });
+
+    it("빈 값은 빈 문자열로 그대로 반환한다 (BASE 만 남는 깨진 URL 방지)", () => {
+      expect(apiUrl("")).toBe("");
+    });
+
+    it("이미 절대 URL 이면 BASE 를 중복으로 붙이지 않는다", () => {
+      expect(apiUrl("https://cdn.example.com/x.webp")).toBe("https://cdn.example.com/x.webp");
+      expect(apiUrl("http://example.com/x")).toBe("http://example.com/x");
+      expect(apiUrl("//cdn.example.com/x")).toBe("//cdn.example.com/x");
+    });
   });
 });
