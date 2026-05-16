@@ -3,6 +3,23 @@
 ## 대상
 현재 브랜치에 연결된 열린 PR의 CI 상태와 리뷰 코멘트를 처리한다.
 
+## 초기 cron 등록
+
+본 명세는 Claude Code 의 `CronCreate` 로 3분 주기 cron 으로 등록되어 동작한다.
+PR 생성 직후 [`CLAUDE.md`](../CLAUDE.md#pr-생성-후-자동-동작) 의 자동 동작이 다음을 호출한다:
+
+```
+CronCreate({
+  schedule: "*/3 * * * *",
+  prompt: "@.claude/loop.md 절차에 따라 PR #<번호> 의 CI 와 코멘트를 점검하고 처리해줘.",
+  recurring: true
+})
+```
+
+- 수동 등록이 필요한 경우(예: PR 생성 흐름 외부에서 시작)에도 같은 형식 사용
+- 동일 PR 번호에 대한 cron 이 이미 활성이면 추가 등록을 생략 (`CronList` 로 사전 확인)
+- 자동 종료는 본 명세 하단 "자동 중단" 섹션이 처리
+
 ## 절차
 1. `gh pr view --json number,url,statusCheckRollup` 로 현재 PR 과 CI rollup 을 함께 조회
 2. **CI 실패 확인 (코멘트 처리보다 우선)**
