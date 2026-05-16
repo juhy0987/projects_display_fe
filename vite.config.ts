@@ -24,11 +24,11 @@ export default defineConfig(() => ({
     // 개발 시 BE API 프록시 — CORS 없이 쿠키 기반 세션을 유지한다.
     proxy: {
       "/api": {
-        target: "http://localhost:8000",
+        target: "http://211.34.33.119:27477",
         changeOrigin: true,
       },
       "/static": {
-        target: "http://localhost:8000",
+        target: "http://211.34.33.119:27477",
         changeOrigin: true,
       },
     },
