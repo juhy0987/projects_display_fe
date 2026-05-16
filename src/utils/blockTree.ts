@@ -25,14 +25,18 @@ export function replaceBlockById(
   });
 }
 
-/** blockId 를 찾아 patch 를 병합한다. children 은 유지. */
+/** blockId 를 찾아 patch 를 병합한다. children 은 항상 유지 (patch 가 덮어쓰지 못하도록). */
 export function patchBlockById(
   blocks: Block[],
   blockId: string,
   patch: Partial<Block>,
 ): Block[] {
   return blocks.map((b) => {
-    if (b.id === blockId) return { ...b, ...patch };
+    if (b.id === blockId) {
+      // patch 에 children 이 포함되어 있어도 무시하고 기존 children 을 보존한다.
+      const { children: _ignored, ...safePatch } = patch as Partial<Block>;
+      return { ...b, ...safePatch, children: b.children };
+    }
     return { ...b, children: patchBlockById(b.children, blockId, patch) };
   });
 }

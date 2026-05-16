@@ -51,7 +51,15 @@ export default function CodeBlock({ block, onReload }: BlockComponentProps) {
       setMermaidError(null);
       return;
     }
-    const id = `mermaid-${block.id.replace(/[^a-zA-Z0-9]/g, "")}`;
+    // mermaid 전역(CDN) 이 아직 로드되지 않은 상태에서 호출되면 ReferenceError 로
+    // 앱이 크래시한다. typeof 가드로 안전하게 처리한다.
+    if (typeof mermaid === "undefined") {
+      setMermaidSvg(null);
+      setMermaidError("Mermaid 라이브러리 로드 대기 중입니다.");
+      return;
+    }
+    // 동일 블록 재렌더링 시 mermaid 내부 id 충돌을 피하기 위해 매 호출마다 고유 suffix 부여.
+    const id = `mermaid-${block.id.replace(/[^a-zA-Z0-9]/g, "")}-${Date.now()}`;
     mermaid
       .render(id, block.code)
       .then(({ svg }) => {

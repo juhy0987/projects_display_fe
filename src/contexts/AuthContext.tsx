@@ -41,7 +41,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         username: data.username ?? null,
       });
     } catch {
-      // 네트워크 오류 시 미인증 상태 유지
+      // 네트워크 / 파싱 오류 시 명시적으로 미인증 상태로 강등한다.
+      // (이전 state 가 authenticated=true 였더라도 안전 측면에서 false 로 reset)
+      setState({ authenticated: false, username: null });
     }
   }, []);
 

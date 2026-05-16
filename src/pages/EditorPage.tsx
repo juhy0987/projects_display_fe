@@ -62,10 +62,15 @@ export default function EditorPage({
     void loadDocument();
   }, [loadDocument]);
 
-  // 제목 편집 후 blur 시 저장
+  // 제목 편집 후 blur 시 저장.
+  // h1 의 표시 텍스트는 `doc.title || "제목 없음"` 이므로, 빈 제목 상태에서
+  // 그대로 blur 하면 placeholder 인 "제목 없음" 이 textContent 로 잡혀
+  // 실제 빈 제목이 "제목 없음" 으로 덮어쓰여지는 버그가 있었다.
+  // placeholder 일치 시 빈 문자열로 정규화한다.
   const titleEdit = useInlineEdit(authenticated, async () => {
     if (!doc || !titleRef.current) return;
-    const newTitle = titleRef.current.textContent?.trim() ?? "";
+    const raw = titleRef.current.textContent?.trim() ?? "";
+    const newTitle = raw === "제목 없음" ? "" : raw;
     if (newTitle !== doc.title) {
       await documentsApi.updateTitle(doc.id, newTitle);
       setDoc((prev) => (prev ? { ...prev, title: newTitle } : prev));
