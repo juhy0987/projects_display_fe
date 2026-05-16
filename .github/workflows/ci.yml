@@ -7,29 +7,35 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  test:
-    name: pytest (Python ${{ matrix.python-version }})
+  check:
+    name: lint + typecheck + test + build (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12"]
+        node-version: ["20"]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: ${{ matrix.python-version }}
-          enable-cache: true
-          cache-dependency-glob: |
-            pyproject.toml
-            uv.lock
+          node-version: ${{ matrix.node-version }}
+          cache: npm
 
       - name: Install dependencies
-        run: uv sync --frozen --group dev
+        run: npm ci
 
-      - name: Run pytest
-        run: uv run pytest
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
