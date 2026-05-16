@@ -114,7 +114,9 @@ fe/
 ### 최초 1회 설정
 
 - Settings → Pages → **Source = "GitHub Actions"** 로 전환 (이후 워크플로가 자동 처리)
-- 또는 CLI: `gh api -X POST repos/<owner>/<repo>/pages -F build_type=workflow`
+- 또는 CLI:
+  - 최초 활성화: `gh api -X POST repos/<owner>/<repo>/pages -F build_type=workflow`
+  - 기존 legacy(branch) → workflow 로 전환: `gh api -X PUT repos/<owner>/<repo>/pages -F build_type=workflow`
 
 ## 개발 규칙
 
