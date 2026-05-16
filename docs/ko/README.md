@@ -91,6 +91,31 @@ fe/
 - `hooks` 는 재사용 가능한 로직 (데이터 페칭, 디바운스 등).
 - `contexts` 는 전역 상태 (인증 / 테마 / 토스트).
 
+## 배포
+
+본 저장소는 GitHub Pages 로 자동 배포됩니다.
+
+- **배포 URL**: `https://juhy0987.github.io/projects_display_fe/`
+- **트리거**: `main` 브랜치 push (`.github/workflows/deploy-pages.yml`)
+- **수동 재배포**: Actions 탭 → "Deploy to GitHub Pages" → `Run workflow`
+- **소스 모드**: GitHub Actions (legacy "Deploy from a branch" 미사용)
+- **라우터**: `HashRouter` — `/#/docs/<id>` 형태. 새로고침 / 직접 진입 시에도 404 없이 동작.
+
+### BE API 도메인 주입
+
+워크플로는 빌드 시 `VITE_API_BASE_URL` 을 Repository Variables 에서 읽어 주입합니다.
+
+1. Settings → Secrets and variables → Actions → **Variables** 탭
+2. `New repository variable` → 이름 `VITE_API_BASE_URL` / 값: BE 배포 도메인 (예: `https://api.example.com`)
+3. 새 main push 또는 수동 `workflow_dispatch` 로 재빌드
+
+미설정 시 `src/api/client.ts` 의 `BASE = ""` 가 적용되어 상대 경로 호출 — Pages 도메인에 BE 가 없으므로 API 호출은 실패하지만 정적 화면(라우팅 / 레이아웃)은 정상 동작.
+
+### 최초 1회 설정
+
+- Settings → Pages → **Source = "GitHub Actions"** 로 전환 (이후 워크플로가 자동 처리)
+- 또는 CLI: `gh api -X POST repos/<owner>/<repo>/pages -F build_type=workflow`
+
 ## 개발 규칙
 
 - AI 협업 / 코드 규칙: [`.claude/rules/`](../../.claude/rules/) — 6개 문서.
