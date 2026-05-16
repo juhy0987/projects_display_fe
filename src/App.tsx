@@ -1,10 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AppShell from "@/components/layout/AppShell";
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AuthProvider>
         <Routes>
           {/* /docs/:docId 또는 / 에서 AppShell 렌더링 */}
@@ -13,6 +13,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
